@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, shrink-to-fit=0, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+    <title>glsl-pipeline</title>
+  </head>
+  <body style="margin: 0">
+
+    <video id="video" style="display:none" autoplay playsinline></video>
+    <script type="importmap">
+        {
+          "imports": {
+            "three": "https://unpkg.com/three@0.157.0/build/three.module.js",
+            "three/addons/": "https://unpkg.com/three@0.157.0/examples/jsm/"
+          }
+        }
+      </script>
+    <script type="module">
+    
+    import { WebGLRenderer, PerspectiveCamera, Scene, BoxGeometry, ShaderMaterial, Mesh, Vector2, Vector3} from 'three';
+    import resolveLygia from "https://lygia.xyz/resolve.esm.js";
+    import { GlslPipeline } from './index.js';
+    import * as THREE from 'three';
+    import { GUI } from 'three/addons/libs/lil-gui.module.min.js';
+    import Stats from 'three/addons/libs/stats.module.js';
+
+    // Fetch the shader code from file and then proceed
+    fetch('examples/shader.frag')
+    .then(response => response.text())
+    .then(shader_frag => {
+
+
+      let W = window,
+          D = document;
+
+      let width = W.innerWidth;
+      let height = W.innerHeight;
+      let pixelRatio = W.devicePixelRatio;
+
+      const renderer = new WebGLRenderer();
+      renderer.setPixelRatio(pixelRatio);
+      renderer.setSize(width, height);
+      D.body.appendChild(renderer.domElement);
+
+        let video;
+        video = document.getElementById( 'video' );
+
+        const texture = new THREE.VideoTexture( video );
+        texture.colorSpace = THREE.SRGBColorSpace;
+        const material = new THREE.MeshBasicMaterial( { map: texture, depthWrite: false } );
+
+      // Camera access logic
+      if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+        const specificDeviceId = "ddd5ae2f9f449238a36354a9472ff84c3515dcf8240385b33833a0ff8b47252c";
+        const constraints = {
+        video: {
+            width: 1280,
+            height: 720,
+            deviceId: specificDeviceId
+        }
+        };
+          navigator.mediaDevices.getUserMedia(constraints).then(function(stream) {
+              video.srcObject = stream;
+              video.play();
+          }).catch(function(error) {
+              console.error('Unable to access the camera/webcam.', error);
+          });
+      } else {
+          console.error('MediaDevices interface not available.');
+      }
+      shader_frag = resolveLygia(shader_frag);
+
+    const glsl_sandbox = new GlslPipeline(renderer, {
+    // Optional uniforms object to pass to the shader
+    u_radius: { value: 0.2 },
+    u_video: { value: texture },
+    u_kernel_size: { value: 15 },
+    
+});
+      glsl_sandbox.load(shader_frag);
+
+      // New code for GUI
+      const gui = new GUI();
+      gui.add(glsl_sandbox.uniforms.u_radius, 'value', 0, 1).name('Radius').listen();
+      gui.add(glsl_sandbox.uniforms.u_kernel_size, 'value', 0, 20).name('Kernel Size').listen();
+      // Add stats
+      const stats = new Stats();
+      D.body.appendChild(stats.dom);
+
+
+      const mesh = new Mesh(new BoxGeometry(1, 1, 1), glsl_sandbox.material);
+      const scene = new Scene();
+      const cam = new PerspectiveCamera(45, width / height, 0.001, 200);
+      cam.position.z = 3;
+      scene.add(mesh);
+
+      const draw = () => {
+          glsl_sandbox.renderMain();
+          requestAnimationFrame(draw);
+          stats.update();
+      };
+
+      const resize = () => {
+          width = W.innerWidth;
+          height = W.innerHeight;
+          pixelRatio = W.devicePixelRatio;
+
+          renderer.setPixelRatio(pixelRatio);
+          renderer.setSize(width, height);
+
+          glsl_sandbox.setSize(width, height);
+      };
+
+      W.addEventListener("resize", resize);
+      resize();
+
+      draw();
+      
+    });
+    </script>
+  </body>
+</html>
