@@ -9,7 +9,7 @@
   
   <body> 
     <button id="speakButton">Ask Skull</button>
-    <button id="playButton">Play🎶</button>
+    <!-- <button id="playButton">Play🎶</button> -->
 
     <div id="messageListening" style="display:none;">Listening to your message...</div>
     <div id="messageOverlay" style="display:none;">🎃 Sending your message to the afterlife will take ~30s 🎃</div>
@@ -291,42 +291,42 @@
          }
       }
 
-    // // Load the audio and set it to loop
-    // const listener = new AudioListener();
-    // const audioLoader = new AudioLoader();
-    // audioLoader.load('assets/Spook by PeriTune.mp3', function (buffer) {
-    //     const sound = new Audio(listener);
-    //     sound.setBuffer(buffer);
-    //     sound.setLoop(true);
-    //     // Set the volume to 0.5
-    //     sound.setVolume(0.075);
-    //     sound.play();
-    // });
-    const playButton = document.getElementById('playButton');
-
-    // When the button is clicked, play the audio
-    playButton.addEventListener('click', function() {
-        // Assuming you're using three.js's AudioContext
-        const audioContext = THREE.AudioContext.getContext();
-
-        // Resume the AudioContext if needed
-        if (audioContext.state === 'suspended') {
-            audioContext.resume().then(() => {
-                console.log('Playback resumed successfully');
-            });
-        }
-
-        // Your existing code to load and play audio
-        const listener = new AudioListener();
-        const audioLoader = new AudioLoader();
-        audioLoader.load('assets/Spook by PeriTune.mp3', function (buffer) {
-            const sound = new Audio(listener);
-            sound.setBuffer(buffer);
-            sound.setLoop(true);
-            sound.setVolume(0.075);
-            sound.play();
-        });
+    // Load the audio and set it to loop
+    const listener = new AudioListener();
+    const audioLoader = new AudioLoader();
+    audioLoader.load('assets/Spook by PeriTune.mp3', function (buffer) {
+        const sound = new Audio(listener);
+        sound.setBuffer(buffer);
+        sound.setLoop(true);
+        // Set the volume to 0.5
+        sound.setVolume(0.075);
+        sound.play();
     });
+    // const playButton = document.getElementById('playButton');
+
+    // // When the button is clicked, play the audio
+    // playButton.addEventListener('click', function() {
+    //     // Assuming you're using three.js's AudioContext
+    //     const audioContext = THREE.AudioContext.getContext();
+
+    //     // Resume the AudioContext if needed
+    //     if (audioContext.state === 'suspended') {
+    //         audioContext.resume().then(() => {
+    //             console.log('Playback resumed successfully');
+    //         });
+    //     }
+
+    //     // Your existing code to load and play audio
+    //     const listener = new AudioListener();
+    //     const audioLoader = new AudioLoader();
+    //     audioLoader.load('assets/Spook by PeriTune.mp3', function (buffer) {
+    //         const sound = new Audio(listener);
+    //         sound.setBuffer(buffer);
+    //         sound.setLoop(true);
+    //         sound.setVolume(0.075);
+    //         sound.play();
+    //     });
+    // });
 
       const draw = () => {
           glsl_sandbox.renderScene(scene, cam);
