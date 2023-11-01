@@ -30,10 +30,11 @@
     "glslViewer"
   ],
   "devDependencies": {
-    "vite": "^4.4.9",
-    "resolve-lygia": "^1.0.4"
+    "resolve-lygia": "^1.0.4",
+    "vite": "^4.4.9"
   },
   "dependencies": {
+    "openai": "^4.14.1",
     "three": "^0.155.0"
   }
 }

@@ -3,11 +3,16 @@
   <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, shrink-to-fit=0, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
-    <title>glsl-pipeline</title>
+    <title>glsl-pipeline-SpookySkull</title>
+    <link rel="stylesheet" href="styles.css">
   </head>
-  <body style="margin: 0">
+  
+  <body> 
+    <button id="speakButton">Ask Skull</button>
+    <div id="messageListening" style="display:none;">Listening to your message...</div>
+    <div id="messageOverlay" style="display:none;">🎃 Sending your message to the afterlife will take ~30s 🎃</div>
+    <div id="threejs-container" style="width: 100%; height: 100%;"></div>
 
-    <video id="video" style="display:none" autoplay playsinline></video>
     <script type="importmap">
         {
           "imports": {
@@ -15,21 +20,98 @@
             "three/addons/": "https://unpkg.com/three@0.157.0/examples/jsm/"
           }
         }
-      </script>
+    </script>
     <script type="module">
-    
-    import { WebGLRenderer, PerspectiveCamera, Scene, BoxGeometry, ShaderMaterial, Mesh, Vector2, Vector3} from 'three';
-    import resolveLygia from "https://lygia.xyz/resolve.esm.js";
-    import { GlslPipeline } from './index.js';
-    import * as THREE from 'three';
-    import { GUI } from 'three/addons/libs/lil-gui.module.min.js';
-    import Stats from 'three/addons/libs/stats.module.js';
+      import { WebGLRenderer, PerspectiveCamera, Scene, BoxGeometry, ShaderMaterial, Mesh, Vector2, Vector3, Object3D, AudioLoader, Audio, AudioListener } from 'three';
+      import resolveLygia from "https://lygia.xyz/resolve.esm.js";
+      import { OBJLoader } from 'three/examples/jsm/loaders/OBJLoader';
 
-    // Fetch the shader code from file and then proceed
-    fetch('examples/shader.frag')
-    .then(response => response.text())
-    .then(shader_frag => {
+      import { GlslPipeline } from './index.js';
+      import { LLMEndpoint } from './llm-endpoint.js';
 
+        // Speech recognition setup
+      function startListening() {
+        if (recognition && recognition.state !== "recording") {
+            console.log("Listening...");
+            recognition.start();
+            document.getElementById("messageOverlay").style.display = "none";
+            document.getElementById("messageListening").style.display = "block";
+        }
+        }
+        
+        const speakButton = document.getElementById('speakButton');
+        let recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition || window.mozSpeechRecognition || window.msSpeechRecognition)();
+        recognition.lang = 'en-US';
+        recognition.interimResults = false;
+        recognition.maxAlternatives = 5;
+
+        speakButton.addEventListener('click', startListening);
+
+        recognition.onresult = function(event) {
+        // Hide the message overlay
+        document.getElementById("messageListening").style.display = "none";
+        // Show the message overlay
+        document.getElementById("messageOverlay").style.display = "block";
+        const speech = event.results[0][0].transcript;
+
+        // Formatting the recognized speech
+        // speech = speech.replace(/\*.*?\*/, '');  // Remove text between asterisks
+        // speech = speech.replace(/USER: .*/, '');  // Remove parts starting with "USER: "
+        // speech = speech.replace(/&#x27;/g, "'");  // Replace HTML encoded single quotes
+        
+        console.log("Recognized Speech:", speech);
+        // Show the message overlay
+        
+        LLMEndpoint.callEndpoint(speech)
+            .then(formattedOutput => {
+                if (formattedOutput) {  // Check if the formattedOutput is not null
+                    let utterance = new SpeechSynthesisUtterance(formattedOutput);
+                    utterance.lang = "en-US";  // Set language to English
+                    utterance.pitch = 0.4;  // Lower the pitch (default is 1, range is 0 to 2)
+                    utterance.rate = 0.8;   // Make it slower (default is 1, range is 0.1 to 10)    
+                    window.speechSynthesis.speak(utterance);
+                }
+            })
+            .catch(error => {
+                console.error("Error fetching or processing endpoint response:", error);
+            });
+        };
+
+        recognition.onerror = function(event) {
+        console.error("Speech recognition error:", event.error);
+        };
+
+      // Show the message overlay
+      document.getElementById("messageOverlay").style.display = "block";
+
+      // Mediapipe
+	  import vision from 'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.0';
+      const { FaceLandmarker, FilesetResolver } = vision;
+        // MediaPipe
+      const filesetResolver = await FilesetResolver.forVisionTasks(
+            'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.0/wasm'
+      );
+      const faceLandmarker = await FaceLandmarker.createFromOptions( filesetResolver, {
+            baseOptions: {
+                modelAssetPath: 'https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task',
+                delegate: 'GPU'
+            },
+            outputFaceBlendshapes: true,
+            outputFacialTransformationMatrixes: true,
+            runningMode: 'VIDEO',
+            numFaces: 1
+      } );
+      if ( navigator.mediaDevices && navigator.mediaDevices.getUserMedia ) {
+            navigator.mediaDevices.getUserMedia( { video: { facingMode: 'user' } } )
+                .then( function ( stream ) {
+
+                    video.srcObject = stream;
+                    video.play();
+                } )
+                .catch( function ( error ) {
+                    console.error( 'Unable to access the camera/webcam.', error );
+                } );
+      }
 
       let W = window,
           D = document;
@@ -37,68 +119,190 @@
       let width = W.innerWidth;
       let height = W.innerHeight;
       let pixelRatio = W.devicePixelRatio;
+      const container = document.getElementById('threejs-container');
+    //   let width = container.clientWidth;
+    //   let height = container.clientHeight;
 
       const renderer = new WebGLRenderer();
       renderer.setPixelRatio(pixelRatio);
       renderer.setSize(width, height);
-      D.body.appendChild(renderer.domElement);
+    //   D.body.appendChild(renderer.domElement);
 
-        let video;
-        video = document.getElementById( 'video' );
+    container.appendChild(renderer.domElement);
 
-        const texture = new THREE.VideoTexture( video );
-        texture.colorSpace = THREE.SRGBColorSpace;
-        const material = new THREE.MeshBasicMaterial( { map: texture, depthWrite: false } );
+      const video = document.createElement( 'video' );
+      video.addEventListener('play', function() {
+        animation();
+      });
 
-      // Camera access logic
-      if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-        const specificDeviceId = "ddd5ae2f9f449238a36354a9472ff84c3515dcf8240385b33833a0ff8b47252c";
-        const constraints = {
-        video: {
-            width: 1280,
-            height: 720,
-            deviceId: specificDeviceId
-        }
-        };
-          navigator.mediaDevices.getUserMedia(constraints).then(function(stream) {
-              video.srcObject = stream;
-              video.play();
-          }).catch(function(error) {
-              console.error('Unable to access the camera/webcam.', error);
-          });
-      } else {
-          console.error('MediaDevices interface not available.');
+      const shader_vert = resolveLygia(/* glsl */`
+      uniform float   u_time;
+
+      varying vec2    v_texcoord;
+      varying vec3    v_normal;
+      varying vec4    v_position;
+
+      #include "lygia/math/const.glsl"
+      #include "lygia/math/rotate4dX.glsl"
+      #include "lygia/math/rotate4dY.glsl"
+      #include "lygia/math/rotate4dZ.glsl"
+
+      void main(void) {
+          v_position = vec4(position, 1.0); 
+
+          float time = u_time * 5.0;
+
+          mat4 rot =  rotate4dY(time * 0.5) *
+                      rotate4dX(time * 0.3) * 
+                      rotate4dZ(time * 0.2);
+
+        //   v_position = rot * v_position;
+
+          v_normal = normalize( (rot * vec4(normal,1.0)).xyz );
+        //   v_normal = normalize( (vec4(normal,1.0)).xyz );
+          v_texcoord = uv;
+          
+          gl_Position = projectionMatrix * modelViewMatrix * v_position;
       }
-      shader_frag = resolveLygia(shader_frag);
+      `);
 
-    const glsl_sandbox = new GlslPipeline(renderer, {
-    // Optional uniforms object to pass to the shader
-    u_radius: { value: 0.2 },
-    u_video: { value: texture },
-    u_kernel_size: { value: 15 },
-    
-});
-      glsl_sandbox.load(shader_frag);
+      const shader_frag = resolveLygia(/* glsl */`
+      uniform sampler2D   u_scene;
+      uniform sampler2D   u_doubleBuffer0;
 
-      // New code for GUI
-      const gui = new GUI();
-      gui.add(glsl_sandbox.uniforms.u_radius, 'value', 0, 1).name('Radius').listen();
-      gui.add(glsl_sandbox.uniforms.u_kernel_size, 'value', 0, 20).name('Kernel Size').listen();
-      // Add stats
-      const stats = new Stats();
-      D.body.appendChild(stats.dom);
+      uniform vec2        u_resolution;
+      uniform float       u_time;
+      uniform int         u_frame;
 
+      varying vec2        v_texcoord;
+      varying vec3        v_normal;
+      varying vec4        v_position;
+
+      #include "lygia/math/saturate.glsl"
+      #include "lygia/space/ratio.glsl"
+      #include "lygia/space/scale.glsl"
+      #include "lygia/color/mixOklab.glsl"
+      #include "lygia/generative/snoise.glsl"
+
+      void main() {
+          vec4 color = vec4(vec3(0.0), 1.0);
+          vec2 pixel = 1.0 / u_resolution;
+          vec2 st = gl_FragCoord.xy * pixel;
+          vec2 sst = ratio(st, u_resolution); 
+          vec2 uv = v_texcoord;
+      
+
+      #if defined(BACKGROUND)
+          color.a = 0.0;
+
+      #elif defined(DOUBLE_BUFFER_0)
+          float n = snoise( vec3(sst * (1.5 + sin(u_time)) * 5.0, u_time * 0.5) ) * 0.0025;
+          vec2 st0 = scale(st, 0.995 + n);
+          color = texture2D(u_doubleBuffer0, st0);
+
+          vec4 scene = texture2D(u_scene, st);
+          color.rgb = mixOklab(color.rgb, scene.rgb, step(0.99,scene.a));
+          color.a = 1.0;
+
+      #elif defined(POSTPROCESSING)
+          color = texture2D(u_doubleBuffer0, st);
+
+      #else
+          color.rgb = v_normal * 0.5 + 0.5;
+          color.rg = mix(color.rg, uv, saturate(distance(sst, vec2(0.5))*2. ) );
+
+      #endif
+
+          gl_FragColor = color;
+      }
+      `);
+
+      // GLSL Buffers
+      const glsl_sandbox = new GlslPipeline(renderer);
+      glsl_sandbox.load(shader_frag, shader_vert);
 
       const mesh = new Mesh(new BoxGeometry(1, 1, 1), glsl_sandbox.material);
       const scene = new Scene();
       const cam = new PerspectiveCamera(45, width / height, 0.001, 200);
       cam.position.z = 3;
-      scene.add(mesh);
+    //   scene.add(mesh);
+    
+
+      const objLoader = new OBJLoader();
+            objLoader.load('assets/skull.obj', (object) => {
+                object.traverse((child) => {
+                    if (child instanceof Mesh) {
+                        child.material = glsl_sandbox.branchMaterial("OBJMATERIAL");
+                        child.castShadow = true;
+                        child.receiveShadow = true;
+                    }
+                });
+                // Move the skull bit back and up a bit
+                object.position.set(0, 0.0, 0);
+                object.scale.set(0.55, 0.55, 0.55);
+                // Add name to the object so we can find it later
+                object.name = 'Skull';
+                scene.add(object);
+            });
+
+      function lerp(a, b, t) {
+            return (1 - t) * a + t * b;
+      }         
+
+      const transform = new Object3D();
+      function animation() {
+            requestAnimationFrame(animation); // Add this line
+
+      if (video.readyState >= HTMLMediaElement.HAVE_METADATA) {
+
+            const results = faceLandmarker.detectForVideo(video, Date.now());
+
+            if (results.facialTransformationMatrixes.length > 0) {
+
+                const facialTransformationMatrixes = results.facialTransformationMatrixes[0].data;
+
+                transform.matrix.fromArray(facialTransformationMatrixes);
+                transform.matrix.decompose(transform.position, transform.quaternion, transform.scale);
+
+                // Update the position and rotation of the object
+                const objectToFollow = scene.getObjectByName('Skull');
+
+                let t = 0.1; // Interpolation factor, between 0 and 1
+                objectToFollow.rotation.x = lerp(objectToFollow.rotation.x, transform.rotation.x, t);
+                objectToFollow.rotation.y = lerp(objectToFollow.rotation.y, -transform.rotation.y, t);
+                objectToFollow.rotation.z = lerp(objectToFollow.rotation.z, -transform.rotation.z, t);
+
+                objectToFollow.position.x = lerp(objectToFollow.position.x, -transform.position.x * 0.01, t);
+                objectToFollow.position.y = lerp(objectToFollow.position.y, transform.position.y * 0.01, t) + 0.02;
+                objectToFollow.position.z = lerp(objectToFollow.position.z, -transform.position.z * 0.02, t);
+                // objectToFollow.rotation.x = transform.rotation.x;
+                // objectToFollow.rotation.y = -transform.rotation.y;
+                // objectToFollow.rotation.z = -transform.rotation.z;
+
+                // objectToFollow.position.x = transform.position.x*0.01;
+                // objectToFollow.position.y = transform.position.y*0.01;
+                // objectToFollow.position.z = -transform.position.z*0.02;
+
+                // ... (Your existing code for updating face mesh)
+            }
+         }
+      }
+
+    // Load the audio and set it to loop
+    const listener = new AudioListener();
+    const audioLoader = new AudioLoader();
+    audioLoader.load('assets/Spook by PeriTune.mp3', function (buffer) {
+        const sound = new Audio(listener);
+        sound.setBuffer(buffer);
+        sound.setLoop(true);
+        // Set the volume to 0.5
+        sound.setVolume(0.075);
+        sound.play();
+    });
 
       const draw = () => {
-          glsl_sandbox.renderMain();
+          glsl_sandbox.renderScene(scene, cam);
           requestAnimationFrame(draw);
-          stats.update();
       };
 
       const resize = () => {
@@ -110,14 +314,15 @@
           renderer.setSize(width, height);
 
           glsl_sandbox.setSize(width, height);
+
+          cam.aspect = width / height;
+          cam.updateProjectionMatrix();
       };
 
       W.addEventListener("resize", resize);
       resize();
 
       draw();
-      
-    });
     </script>
   </body>
 </html>
