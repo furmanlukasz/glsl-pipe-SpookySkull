@@ -44,7 +44,7 @@
 - [text-generation-webui](https://github.com/oobabooga/text-generation-webui)
 
 🚀 Run and play with interactive demo on github pages (LLM endpoint will be active 72h): 
-- [github.io/glsl-pipe-cambuffer](https://furmanlukasz.github.io/glsl-pipe-SpookySkull/)
+- [github.io/glsl-pipe-SpookySkull](https://furmanlukasz.github.io/glsl-pipe-SpookySkull/)
 - tested on Google Chrome browser
 
 #### Acknowledgements
