@@ -4,6 +4,10 @@
 ![Spooky Skull Demo 2](output2.gif)
 [Watch the video](https://drive.google.com/file/d/1gV0pnI1ukSJzpyJ7PxZScj2ur26YBPNL/view?usp=drive_link)
 
+🚀 Run and play with interactive demo on github pages (LLM endpoint will be active 72h): 
+- [github.io/glsl-pipe-SpookySkull](https://furmanlukasz.github.io/glsl-pipe-SpookySkull/)
+- tested on Google Chrome browser
+
 ## Features ⭐️
 
 ### Striking 3D Skull
@@ -43,9 +47,6 @@
 - [Node.js](https://nodejs.org/)
 - [text-generation-webui](https://github.com/oobabooga/text-generation-webui)
 
-🚀 Run and play with interactive demo on github pages (LLM endpoint will be active 72h): 
-- [github.io/glsl-pipe-SpookySkull](https://furmanlukasz.github.io/glsl-pipe-SpookySkull/)
-- tested on Google Chrome browser
 
 #### Acknowledgements
 Thanks to:
